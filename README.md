@@ -1,5 +1,5 @@
 # AMessenger
-[AMessenger](https://github.com/fffffz/AMessenger) 是一个有跨进程能力的 Handler，特点是非常轻巧。
+[AMessenger](https://github.com/fffffz/AMessenger) 是一个有跨进程能力的 Handler，特点是非常轻巧
 
 
 ### 使用方法
