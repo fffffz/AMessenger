@@ -51,15 +51,10 @@ public class PlayerMessengerHandler extends AHandler {
 
 ### 原理
 很显然是基于 Messenger 实现的
-
 1、AMessenger init 时每个进程都会创建一个 Messenger
-
 2、非主进程 bind 主进程的 HubService，onBind 返回主进程的 Messenger
-
 3、在 onServiceConnected 中把自己的 Messenger 通过主进程的 Messenger 发给主进程（sendMsg0），这样主进程就拥有所有进程的 Messenger
-
 4、之后所有进程之间的消息都先发给主进程再进行转发
-
 ````
 private void sendMsg0() {
     if (mIsMainProcess || mHubMessenger == null) {
