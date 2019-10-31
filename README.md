@@ -63,7 +63,7 @@ private void sendMsg0() {
     Message msg0 = Message.obtain();
     msg0.what = Integer.MIN_VALUE;
     msg0.replyTo = mMessenger;
-    msg0.getData().putInt("pid", mPid);
+    msg0.getData().putString("process", mProcess);
     msg0.getData().putIntArray("whats", getWhats());
     try {
         mHubMessenger.send(msg0);

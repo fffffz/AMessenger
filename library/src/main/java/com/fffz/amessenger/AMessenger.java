@@ -27,7 +27,7 @@ public class AMessenger {
     private Messenger mHubMessenger;
     private Map<Integer, Set<AHandler>> mWhatHandlersMap = new HashMap<>();
     private Map<Handler, int[]> mHandlerWhatsMap = new HashMap<>();
-    private int mPid;
+    private String mProcess;
     private boolean mIsBindingHub;
     private ServiceConnection mServiceConnection;
     private LinkedList<AMessage> mPendingMessages = new LinkedList<>();
@@ -66,7 +66,7 @@ public class AMessenger {
     public synchronized void init(Context context) {
         mContext = context.getApplicationContext();
         mIsMainProcess = Util.isMainProcess(context);
-        mPid = android.os.Process.myPid();
+        mProcess = Util.getProcessName(context);
         if (mMessenger != null) {
             return;
         }
@@ -77,25 +77,25 @@ public class AMessenger {
                 @Override
                 public void dispatchMessage(Message msg) {
                     if (msg.what == Integer.MIN_VALUE) {
+                        String process = msg.getData().getString("process");
                         int[] whats = msg.getData().getIntArray("whats");
-                        int pid = msg.getData().getInt("pid");
                         if (whats == null) {
-                            Iterator<Map<Integer, Messenger>> iterator = mWhatMessengersMap.values().iterator();
-                            Map<Integer, Messenger> pidMessengerMap;
-                            while ((pidMessengerMap = iterator.next()) != null) {
-                                if (pidMessengerMap.remove(pid) != null && pidMessengerMap.size() == 0) {
+                            Iterator<Map<String, Messenger>> iterator = mWhatMessengersMap.values().iterator();
+                            Map<String, Messenger> processMessengerMap;
+                            while ((processMessengerMap = iterator.next()) != null) {
+                                if (processMessengerMap.remove(process) != null && processMessengerMap.size() == 0) {
                                     iterator.remove();
                                 }
                             }
                             return;
                         }
                         for (int what : whats) {
-                            Map<Integer, Messenger> pidMessengerMap = mWhatMessengersMap.get(what);
-                            if (pidMessengerMap == null) {
-                                pidMessengerMap = new HashMap<>();
-                                mWhatMessengersMap.put(what, pidMessengerMap);
+                            Map<String, Messenger> processMessengerMap = mWhatMessengersMap.get(what);
+                            if (processMessengerMap == null) {
+                                processMessengerMap = new HashMap<>();
+                                mWhatMessengersMap.put(what, processMessengerMap);
                             }
-                            pidMessengerMap.put(pid, msg.replyTo);
+                            processMessengerMap.put(process, msg.replyTo);
                         }
                         return;
                     }
@@ -105,13 +105,13 @@ public class AMessenger {
                             handler.dispatchMessage(msg);
                         }
                     }
-                    int sendingPid = msg.getData().getInt("com.ximalaya.ting.amessenger_sendingPid");
-                    Map<Integer, Messenger> pidMessengerMap = mWhatMessengersMap.get(msg.what);
-                    if (pidMessengerMap == null) {
+                    String sendingProcess = msg.getData().getString("com.ximalaya.ting.amessenger_sendingProcess");
+                    Map<String, Messenger> processMessengerMap = mWhatMessengersMap.get(msg.what);
+                    if (processMessengerMap == null) {
                         return;
                     }
-                    for (Map.Entry<Integer, Messenger> entry : pidMessengerMap.entrySet()) {
-                        if (entry.getKey() == sendingPid) {
+                    for (Map.Entry<String, Messenger> entry : processMessengerMap.entrySet()) {
+                        if (entry.getKey().equals(sendingProcess)) {
                             continue;
                         }
                         try {
@@ -186,7 +186,7 @@ public class AMessenger {
         Message msg0 = Message.obtain();
         msg0.what = Integer.MIN_VALUE;
         msg0.replyTo = mMessenger;
-        msg0.getData().putInt("pid", mPid);
+        msg0.getData().putString("process", mProcess);
         msg0.getData().putIntArray("whats", getWhats());
         try {
             mHubMessenger.send(msg0);
@@ -216,11 +216,11 @@ public class AMessenger {
     public synchronized void sendMessage(AMessage aMessage) {
         if (mIsMainProcess) {
             Message msg = aMessage.obtainMessage();
-            Map<Integer, Messenger> pidMessengerMap = mWhatMessengersMap.get(msg.what);
-            if (pidMessengerMap == null) {
+            Map<String, Messenger> processMessengerMap = mWhatMessengersMap.get(msg.what);
+            if (processMessengerMap == null) {
                 return;
             }
-            for (Map.Entry<Integer, Messenger> entry : pidMessengerMap.entrySet()) {
+            for (Map.Entry<String, Messenger> entry : processMessengerMap.entrySet()) {
                 try {
                     entry.getValue().send(msg);
                 } catch (RemoteException e) {
@@ -229,7 +229,7 @@ public class AMessenger {
             }
             return;
         }
-        aMessage.putInt("com.ximalaya.ting.amessenger_sendingPid", mPid);
+        aMessage.putString("com.ximalaya.ting.amessenger_sendingProcess", mProcess);
         if (mHubMessenger == null) {
             mPendingMessages.add(aMessage);
             if (!mIsBindingHub) {
@@ -248,6 +248,6 @@ public class AMessenger {
         return mMessenger;
     }
 
-    private Map<Integer, Map<Integer, Messenger>> mWhatMessengersMap = new HashMap<>();
+    private Map<Integer, Map<String, Messenger>> mWhatMessengersMap = new HashMap<>();
 
 }
